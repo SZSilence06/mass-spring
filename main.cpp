@@ -12,6 +12,7 @@ void init()
 {
     glClearColor(0,0,0,1);
     glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
     gluOrtho2D(0,window.width,0,window.height);
 
     System::getInstance()->setMode(2);
@@ -25,14 +26,17 @@ void display()
     glBegin(GL_POINTS);
     glColor4f(1,1,1,1);
     for(int i = 0; i < 5; i++){
-        glVertex2f(System::getInstance()->mass[i].x * 50, window.height / 2);
+        glVertex2f(System::getInstance()->mass[i].x[0] + System::getInstance()->mass[i].r[0],
+                System::getInstance()->mass[i].x[1] + System::getInstance()->mass[i].r[1]);
     }
     glEnd();
 
     glBegin(GL_LINES);
     for(int i = 0; i < 4; i++){
-        glVertex2f(System::getInstance()->mass[i].x * 50, window.height / 2);
-        glVertex2f(System::getInstance()->mass[i+1].x * 50, window.height / 2);
+        glVertex2f(System::getInstance()->mass[i].x[0] + System::getInstance()->mass[i].r[0],
+                System::getInstance()->mass[i].x[1] + System::getInstance()->mass[i].r[1]);
+        glVertex2f(System::getInstance()->mass[i+1].x[0] + System::getInstance()->mass[i+1].r[0],
+                System::getInstance()->mass[i+1].x[1] + System::getInstance()->mass[i+1].r[1]);
     }
     glEnd();
 

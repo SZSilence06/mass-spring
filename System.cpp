@@ -9,15 +9,19 @@ System* System::instance = nullptr;
 System::System(){
     for(int i = 0; i < 5; i++){
         mass[i].m = 5;
-        mass[i].v = 0;
-        mass[i].originalX = mass[i].x = 2 * i;
+        mass[i].v = Vector2f::Zero();
+        mass[i].x = Vector2f::Zero();
+        mass[i].r[0] = 100 * i;
+        mass[i].r[1] = 100 * i;
+        //mass[i].r[0] = 100 * i;
+        //mass[i].r[1] = 250;
     }
 
-    mass[4].x += 2;
+    mass[4].x[0] = 50;
+    mass[4].x[1] = 10;
 
     for(int i = 0; i < 4; i++){
         str[i].k = 0.2;
-        str[i].l = 2;
     }
 
     M = MatrixXf::Zero(5,5);
@@ -60,21 +64,35 @@ System* System::getInstance(){
 }
 
 void System::simulate(){
-    VectorXf X(5,1);
-    VectorXf V(5,1);
+    MatrixXf X(5,2);
+    MatrixXf V(5,2);
 
-    for(int i = 0; i <X.size(); i++){
-        X[i] = mass[i].x - mass[i].originalX;
+    for(int i = 0; i <X.rows(); i++){
+        X.row(i) = mass[i].x;
     }
 
-    for(int i = 0; i < V.size(); i++){
-        V[i] = mass[i].v;
+    for(int i = 0; i < V.rows(); i++){
+        V.row(i) = mass[i].v;
     }
 
     MatrixXf KVX = - K * (X + V);
-    VectorXf F = - K * X;
+    MatrixXf F = MatrixXf::Zero(5,2);
+    for(int i = 0; i < F.rows(); i++){
+        if(i > 0){
+            Vector2f temp = mass[i].x - mass[i-1].x + mass[i].r - mass[i-1].r;
+            F.row(i) -= str[i-1].k * (temp.norm() - (mass[i].r - mass[i-1].r).norm())
+                    * temp.normalized();
+        }
+        if(i < F.rows() - 1){
+            VectorXf temp = mass[i+1].x - mass[i].x + mass[i+1].r - mass[i].r;
+            F.row(i) += str[i].k * (temp.norm() - (mass[i+1].r - mass[i].r).norm())
+                    * temp.normalized();
+        }
+    }
 
-    VectorXf FC = VectorXf::Zero(F.size() + 1);
+    MatrixXf dV = M.inverse() * F;
+
+    /*VectorXf FC = VectorXf::Zero(F.size() + 1);
     for(int i = 0; i < F.size(); i++){
         FC[i] = F[i];
     }
@@ -82,7 +100,7 @@ void System::simulate(){
     VectorXf dV = VectorXf::Zero(F.size());
     for(int i = 0; i < dV.size(); i++){
         dV[i] = ALambda[i];
-    }
+    }*/
 
     if(mode == 1){
         //dV = M.inverse() * F;
@@ -90,9 +108,9 @@ void System::simulate(){
         V += dV;
     }
     else if(mode == 2){
-        VectorXf Fc = VectorXf::Zero(F.size());
-        Fc[0] = -F[0];
-        dV = M.inverse() * (F + Fc);
+        //VectorXf Fc = VectorXf::Zero(F.size());
+        //Fc[0] = -F[0];
+        //dV = M.inverse() * (F + Fc);
         V += dV;
         X += V;
     }
@@ -102,8 +120,8 @@ void System::simulate(){
         X += V;
     }
 
-    for(int i = 0; i < X.size(); i++){
-        mass[i].x = mass[i].originalX + X[i];
-        mass[i].v = V[i];
+    for(int i = 0; i < X.rows(); i++){
+        mass[i].x = X.row(i);
+        mass[i].v = V.row(i);
     }
 }

@@ -7,17 +7,16 @@ using namespace Eigen;
 
 class Mass{
 public:
-    float x;
+    Vector2f x;
+    Vector2f r;
     float m;
-    float v;
-    float a;
-    float originalX;
+    Vector2f v;
+    Vector2f a;
 };
 
 class String{
 public:
     float k;
-    float l;
 };
 
 class System{
