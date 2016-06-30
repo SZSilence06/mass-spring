@@ -11,7 +11,7 @@ SOURCES += main.cpp \
 INCLUDEPATH += /home/zju/usr/include \
                /usr/include/eigen3
 
-LIBS += -Lusr/lib/x86_64-linux-gnu -lglut -lGLU -lGL
+LIBS += -Lusr/lib/x86_64-linux-gnu -lglut -lGLU -lGL -pthread
 
 HEADERS += \
     common.h \

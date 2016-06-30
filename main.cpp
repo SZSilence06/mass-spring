@@ -3,6 +3,7 @@
 #include "common.h"
 #include "System.h"
 #include "window.h"
+#include <pthread.h>
 
 using namespace std;
 
@@ -16,27 +17,38 @@ void init()
     gluOrtho2D(0,window.width,0,window.height);
 
     System::getInstance()->setMode(2);
+    System::getInstance()->load("rest.obj");
 }
 
 void display()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+    System* system = System::getInstance();
+
     glPointSize(5);
     glBegin(GL_POINTS);
     glColor4f(1,1,1,1);
-    for(int i = 0; i < 5; i++){
-        glVertex2f(System::getInstance()->mass[i].x[0] + System::getInstance()->mass[i].r[0],
-                System::getInstance()->mass[i].x[1] + System::getInstance()->mass[i].r[1]);
+    for(int i = 0; i < system->mass.size(); i++){
+        glVertex2f(system->mass[i].x[0] + system->mass[i].r[0],
+                system->mass[i].x[1] + system->mass[i].r[1]);
     }
     glEnd();
 
     glBegin(GL_LINES);
-    for(int i = 0; i < 4; i++){
-        glVertex2f(System::getInstance()->mass[i].x[0] + System::getInstance()->mass[i].r[0],
-                System::getInstance()->mass[i].x[1] + System::getInstance()->mass[i].r[1]);
-        glVertex2f(System::getInstance()->mass[i+1].x[0] + System::getInstance()->mass[i+1].r[0],
-                System::getInstance()->mass[i+1].x[1] + System::getInstance()->mass[i+1].r[1]);
+    for(int i = 0; i < system->mass.size(); i++){
+        for(int j = 0; j < system->mass[i].strings.size(); j++){
+            int strId = system->mass[i].strings[j];
+            int a = system->str[strId].mass1;
+            int b = system->str[strId].mass2;
+
+
+            glVertex2f(system->mass[a].x[0] + system->mass[a].r[0],
+                    system->mass[a].x[1] + system->mass[a].r[1]);
+            glVertex2f(system->mass[b].x[0] + system->mass[b].r[0],
+                    system->mass[b].x[1] + system->mass[b].r[1]);
+        }
     }
     glEnd();
 
@@ -61,6 +73,7 @@ void onTimer(int timerId)
 
 int main(int argc,char **argv)
 {
+    int i = pthread_getconcurrency();
     window.width = window.height = 500;
 
     glutInit(&argc,argv);
