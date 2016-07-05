@@ -10,6 +10,7 @@ System* System::instance = nullptr;
 System::System(){
     G[0] = 0;
     G[1] = -2;
+    h = 5;
 }
 
 System* System::getInstance(){
@@ -76,28 +77,32 @@ void System::load(char *filePath){
     }
     fin.close();
 
-    M = MatrixXf::Zero(mass.size(),mass.size());
+    M = MatrixXf::Zero(mass.size()*2,mass.size()*2);
 
-    for(int i = 0; i < M.cols(); i++){
-        M(i, i) = mass[i].m;
+    for(int i = 0; i < mass.size(); i++){
+        M(i*2, i*2) = mass[i].m;
+        M(i*2+1, i*2+1) = mass[i].m;
     }
 
 }
 
 void System::simulate(){
-    MatrixXf X(mass.size(),2);
-    MatrixXf V(mass.size(),2);
+    VectorXf X = VectorXf::Zero(mass.size()*2);
+    VectorXf V = VectorXf::Zero(mass.size()*2);
 
-    for(int i = 0; i <X.rows(); i++){
-        X.row(i) = mass[i].x;
+    for(int i = 0; i <mass.size(); i++){
+        X[i*2] = mass[i].x[0];
+        X[i*2+1] = mass[i].x[1];
     }
 
-    for(int i = 0; i < V.rows(); i++){
-        V.row(i) = mass[i].v;
+    for(int i = 0; i < mass.size(); i++){
+        V[i*2] = mass[i].v[0];
+        V[i*2+1] = mass[i].v[1];
     }
 
-    MatrixXf F = MatrixXf::Zero(mass.size(),2);
-    for(int i = 0; i < F.rows(); i++){
+    VectorXf F = VectorXf::Zero(mass.size()*2);
+    MatrixXf K = MatrixXf::Zero(mass.size()*2,mass.size()*2);
+    for(int i = 0; i < mass.size(); i++){
         if(i == 0 || i == 1 || i == 2){
             continue;
         }
@@ -111,35 +116,50 @@ void System::simulate(){
             else{
                 anotherMass = tempStr.mass2;
             }
-
             Vector2f temp = mass[i].x - mass[anotherMass].x + mass[i].r - mass[anotherMass].r;
-            F.row(i) -= tempStr.k * (temp.norm() - tempStr.l) * temp.normalized();
+            Vector2f temp2 = tempStr.k * (temp.norm() - tempStr.l) * temp.normalized();
+            F[i*2] -= temp2[0];
+            F[i*2+1] -= temp2[1];
+
+            MatrixXf ttT = temp2 * temp2.transpose();
+            K(i*2,i*2) = ttT(0,0);
+            K(i*2,i*2+1) = ttT(0,1);
+            K(i*2+1,i*2) = ttT(1,0);
+            K(i*2+1,i*2+1) = ttT(1,1);
+            K(i*2,anotherMass*2) = -ttT(0,0);
+            K(i*2,anotherMass*2+1) = -ttT(0,1);
+            K(i*2+1,anotherMass*2) = -ttT(1,0);
+            K(i*2+1,anotherMass*2+1) = -ttT(1,1);
         }
-        F.row(i) += G;
+        F[i*2] += G[0];
+        F[i*2+1] += G[1];
     }
 
-    MatrixXf dV = M.inverse() * F;
+    VectorXf dV;
 
     if(mode == 1){
-        //dV = M.inverse() * F;
+        dV = M.inverse() * F * h;
         X += V;
         V += dV;
     }
     else if(mode == 2){
         //VectorXf Fc = VectorXf::Zero(F.size());
         //Fc[0] = -F[0];
-        //dV = M.inverse() * (F + Fc);
+        dV = M.inverse() * F * h;
         V += dV;
         X += V;
     }
     else if(mode == 3){
         //dV = A.inverse() * KVX;
+
         V += dV;
         X += V;
     }
 
-    for(int i = 0; i < X.rows(); i++){
-        mass[i].x = X.row(i);
-        mass[i].v = V.row(i);
+    for(int i = 0; i < mass.size(); i++){
+        mass[i].x[0] = X[i*2];
+        mass[i].x[1] = X[i*2+1];
+        mass[i].v[0] = V[i*2];
+        mass[i].v[1] = V[i*2+1];
     }
 }

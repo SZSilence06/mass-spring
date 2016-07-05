@@ -29,6 +29,7 @@ public:
 class System{
 private:
     int mode;
+    float h;
 
 public:
     vector<Mass> mass;
