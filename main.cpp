@@ -16,7 +16,7 @@ void init()
     glEnable(GL_LINE_SMOOTH);
     gluOrtho2D(0,window.width,0,window.height);
 
-    System::getInstance()->setMode(2);
+    System::getInstance()->setMode(3);
     System::getInstance()->load("rest.obj");
 }
 

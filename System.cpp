@@ -8,9 +8,7 @@ using namespace std;
 System* System::instance = nullptr;
 
 System::System(){
-    G[0] = 0;
-    G[1] = -2;
-    h = 5;
+    h = 1;
 }
 
 System* System::getInstance(){
@@ -78,6 +76,11 @@ void System::load(char *filePath){
     fin.close();
 
     M = MatrixXf::Zero(mass.size()*2,mass.size()*2);
+    G = VectorXf::Zero(mass.size()*2);
+    for(int i = 0; i <mass.size(); i++){
+        G[i*2] = 0;
+        G[i*2+1] = -2;
+    }
 
     for(int i = 0; i < mass.size(); i++){
         M(i*2, i*2) = mass[i].m;
@@ -103,9 +106,6 @@ void System::simulate(){
     VectorXf F = VectorXf::Zero(mass.size()*2);
     MatrixXf K = MatrixXf::Zero(mass.size()*2,mass.size()*2);
     for(int i = 0; i < mass.size(); i++){
-        if(i == 0 || i == 1 || i == 2){
-            continue;
-        }
         for(int j = 0; j < mass[i].strings.size(); j++){
             String tempStr = str[mass[i].strings[j]];
             int anotherMass;
@@ -116,42 +116,56 @@ void System::simulate(){
             else{
                 anotherMass = tempStr.mass2;
             }
-            Vector2f temp = mass[i].x - mass[anotherMass].x + mass[i].r - mass[anotherMass].r;
+            Vector2f temp = mass[anotherMass].x - mass[i].x + mass[anotherMass].r - mass[i].r;
             Vector2f temp2 = tempStr.k * (temp.norm() - tempStr.l) * temp.normalized();
-            F[i*2] -= temp2[0];
-            F[i*2+1] -= temp2[1];
+            F[i*2] += temp2[0];
+            F[i*2+1] += temp2[1];
 
-            MatrixXf ttT = temp2 * temp2.transpose();
-            K(i*2,i*2) = ttT(0,0);
-            K(i*2,i*2+1) = ttT(0,1);
-            K(i*2+1,i*2) = ttT(1,0);
-            K(i*2+1,i*2+1) = ttT(1,1);
-            K(i*2,anotherMass*2) = -ttT(0,0);
-            K(i*2,anotherMass*2+1) = -ttT(0,1);
-            K(i*2+1,anotherMass*2) = -ttT(1,0);
-            K(i*2+1,anotherMass*2+1) = -ttT(1,1);
+            Vector2f temp3 = temp.normalized();
+            Matrix2f ttT = temp3 * temp3.transpose();
+            float norm = temp.norm();
+            float norm3 = norm * norm * norm;
+            Matrix2f dnormT;
+            dnormT(0,0) = temp[1] * temp[1] / norm3;
+            dnormT(0,1) = -temp[0] * temp[1] / norm3;
+            dnormT(1,0) = -temp[1] * temp[0] / norm3;
+            dnormT(1,1) = temp[0] * temp[0] / norm3;
+            ttT += (norm - tempStr.l) * dnormT;
+
+            K(i*2,i*2) += ttT(0,0) * tempStr.k;
+            K(i*2,i*2+1) += ttT(0,1) * tempStr.k;
+            K(i*2+1,i*2) += ttT(1,0) * tempStr.k;
+            K(i*2+1,i*2+1) += ttT(1,1) * tempStr.k;
+            K(i*2,anotherMass*2) -= ttT(0,0) * tempStr.k;
+            K(i*2,anotherMass*2+1) -= ttT(0,1) * tempStr.k;
+            K(i*2+1,anotherMass*2) -= ttT(1,0) * tempStr.k;
+            K(i*2+1,anotherMass*2+1) -= ttT(1,1) * tempStr.k;
         }
-        F[i*2] += G[0];
-        F[i*2+1] += G[1];
     }
 
     VectorXf dV;
 
     if(mode == 1){
-        dV = M.inverse() * F * h;
+        dV = M.inverse() * h * (-K * X + G);
+        for(int i=0;i<3;i++){
+            dV[i*2] = dV[i*2+1] = 0;
+        }
         X += V;
         V += dV;
     }
     else if(mode == 2){
-        //VectorXf Fc = VectorXf::Zero(F.size());
-        //Fc[0] = -F[0];
-        dV = M.inverse() * F * h;
+        dV = M.inverse() * h * (F + G);
+        for(int i=0;i<3;i++){
+            dV[i*2] = dV[i*2+1] = 0;
+        }
         V += dV;
         X += V;
     }
     else if(mode == 3){
-        //dV = A.inverse() * KVX;
-
+        dV = (M + h * h * K).inverse() * h * (F - K * h * V + G);
+        for(int i=0;i<3;i++){
+            dV[i*2] = dV[i*2+1] = 0;
+        }
         V += dV;
         X += V;
     }

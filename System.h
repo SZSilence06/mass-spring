@@ -40,7 +40,7 @@ protected:
     MatrixXf M;
     MatrixXf A;
     MatrixXf MC;
-    Vector2f G;
+    VectorXf G;
     System();
 
 public:
